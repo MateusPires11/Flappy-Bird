@@ -1,3 +1,6 @@
+
+
+let frames = 0;
 const sprites = new Image();
 sprites.src = './sprites.png';
 
@@ -20,38 +23,44 @@ const msgGetReady = {
             msgGetReady.x, msgGetReady.y,
             msgGetReady.largura, msgGetReady.altura);
     }
-}
+};
+
+function criarchao() {
+    const chao = {
+        spritex: 0,
+        spritey: 610,
+        largura: 224,
+        altura: 112,
+        x: 0,
+        y: canvas.height - 112,
+        atualiza() {
+            const movimentodochao = 1;
+            const repetechao = chao.largura / 2;
+            const movimento = chao.x -= movimentodochao;
+
+            chao.x = movimento % repetechao;
+        },
+
+        desenha() {
+            ctx.drawImage(
+                sprites,
+                chao.spritex, chao.spritey,
+                chao.largura, chao.altura,
+                chao.x, chao.y,
+                chao.largura, chao.altura,);
 
 
+            ctx.drawImage(
+                sprites,
+                chao.spritex, chao.spritey,
+                chao.largura, chao.altura,
+                (chao.x + chao.largura), chao.y,
+                chao.largura, chao.altura,);
+        }
 
-
-
-
-const chao = {
-    spritex: 0,
-    spritey: 610,
-    largura: 224,
-    altura: 112,
-    x: 0,
-    y: canvas.height - 112,
-
-    desenha() {
-        ctx.drawImage(
-            sprites,
-            chao.spritex, chao.spritey,
-            chao.largura, chao.altura,
-            chao.x, chao.y,
-            chao.largura, chao.altura,);
-
-        ctx.drawImage(
-            sprites,
-            chao.spritex, chao.spritey,
-            chao.largura, chao.altura,
-            (chao.x + chao.largura), chao.y,
-            chao.largura, chao.altura,);
     }
-
-}
+    return chao
+};
 
 const planodefundo = {
 
@@ -89,89 +98,236 @@ const planodefundo = {
 
 }
 
+function colisao(flappybird, chao) {
+    const flappybirdy = flappybird.y + flappybird.altura;
+    const chaoy = chao.y
 
-
-
-
-const flappybird = {
-    spritex: 0,
-    spritey: 0,
-    largura: 33,
-    altura: 24,
-    x: 10,
-    y: 50,
-    gravidade: 0.25,
-    valeocidade: 0,
-    atualiza() {
-        flappybird.valeocidade += flappybird.gravidade;
-        flappybird.y += flappybird.valeocidade;
-    },
-
-    desenha() {
-        ctx.drawImage(
-            sprites,
-            flappybird.spritex, flappybird.spritey,
-            flappybird.largura, flappybird.altura,
-            flappybird.x, flappybird.y,
-            flappybird.largura, flappybird.altura,);
-
+    if (flappybirdy >= chaoy) {
+        return true;
     }
+    return false;
 }
 
+function criaCanos() {
+    const canos = {
+        largura: 52,
+        altura: 400,
+        chao: {
+            spritex: 0,
+            spritey: 169,
+        },
+        ceu: {
+            spritex: 52,
+            spritey: 169,
+        },
+        espaco: 90,
+        pares: [],
+
+        desenha() {
+            canos.pares.forEach((par) => {
+                const yRandom = par.y;
+                const espacamentoEntreCanos = canos.espaco;
+
+                // CANO DO CÉU
+                const canoCeuX = par.x;
+                const canoCeuY = yRandom;
+                ctx.drawImage(
+                    sprites,
+                    canos.ceu.spritex, canos.ceu.spritey,
+                    canos.largura, canos.altura,
+                    canoCeuX, canoCeuY,
+                    canos.largura, canos.altura
+                );
+
+                // CANO DO CHÃO
+                const canoChaoX = par.x;
+                const canoChaoY = canos.altura + espacamentoEntreCanos + yRandom;
+                ctx.drawImage(
+                    sprites,
+                    canos.chao.spritex, canos.chao.spritey,
+                    canos.largura, canos.altura,
+                    canoChaoX, canoChaoY,
+                    canos.largura, canos.altura
+                );
+
+                par.canoCeu = {
+                    x: canoCeuX,
+                    y: canos.altura + canoCeuY,
+                };
+                par.canoChao = {
+                    x: canoChaoX,
+                    y: canoChaoY,
+                };
+            });
+        },
+
+        temColisaoComOFlappyBird(par) {
+            const cabecaDoFlappy = globais.flappybird.y;
+            const peDoFlappy = globais.flappybird.y + globais.flappybird.altura;
+
+            if ((globais.flappybird.x + globais.flappybird.largura) >= par.x) {
+                if (cabecaDoFlappy <= par.canoCeu.y) return true;
+                if (peDoFlappy >= par.canoChao.y) return true;
+            }
+            return false;
+        },
+
+        atualiza() {
+            const passou100Frames = frames % 100 === 0;
+            if (passou100Frames) {
+                canos.pares.push({
+                    x: canvas.width,
+                    y: -150 * (Math.random() + 1),
+                });
+            }
+
+            canos.pares.forEach((par) => {
+                par.x -= 2;
+
+                if (canos.temColisaoComOFlappyBird(par)) {
+                    console.log('Você perdeu!');
+                    mudaparatelas(telas.INICIO); // Corrigido
+                }
+
+                if (par.x + canos.largura <= 0) {
+                    canos.pares.shift();
+                }
+            });
+        },
+    };
+
+    return canos;
+}
+
+
+
+function criarflappybird() {
+    const flappybird = {
+        spritex: 0,
+        spritey: 0,
+        largura: 33,
+        altura: 24,
+        x: 10,
+        y: 50,
+        pulo: 4.6,
+        pula() {
+            flappybird.velocidade = -flappybird.pulo;
+        },
+        gravidade: 0.25,
+        velocidade: 0,
+        atualiza() {
+            if (colisao(flappybird, globais.chao)) {
+                mudaparatelas(telas.INICIO)
+                return;
+            }
+
+            flappybird.velocidade += flappybird.gravidade;
+            flappybird.y += flappybird.velocidade;
+        },
+        movimentos: [
+            { spritex: 0, spritey: 0, },
+            { spritex: 0, spritey: 26, },
+            { spritex: 0, spritey: 52, },
+        ],
+
+        frameAtual: 0,
+        atualizaFrameAtual() {
+            const intervaloDeFrames = 10;
+            const passouOIntervalo = frames % intervaloDeFrames === 0;
+            if (passouOIntervalo) {
+                const baseincremento = 1;
+                const incremento = baseincremento + flappybird.frameAtual;
+                const baseDeRepeticao = flappybird.movimentos.length
+                flappybird.frameAtual = incremento % baseDeRepeticao
+            }
+
+
+        },
+
+        desenha() {
+            const { spritex, spritey } = flappybird.movimentos[flappybird.frameAtual];
+            flappybird.atualizaFrameAtual()
+            ctx.drawImage(
+                sprites,
+                spritex, spritey,                // posição na sprite
+                flappybird.largura, flappybird.altura,  // tamanho do recorte
+                flappybird.x, flappybird.y,      // posição no canvas
+                flappybird.largura, flappybird.altura   // tamanho no canvas
+            );
+
+        }
+    }
+    return flappybird;
+}
+
+const globais = {};
 let telasAtiva = {};
 
 function mudaparatelas(novatela) {
     telasAtiva = novatela;
-}
-
-
+    if (telasAtiva.inicializacao) {
+        telasAtiva.inicializacao();
+    }
+};
 
 const telas = {
     INICIO: {
+        inicializacao() {
+            globais.flappybird = criarflappybird();
+            globais.chao = criarchao();
+            globais.canos = criaCanos();
+        },
         desenha() {
             planodefundo.desenha();
-            chao.desenha();
+            globais.canos.desenha();
+            globais.chao.desenha();
+            globais.flappybird.desenha();
+
             msgGetReady.desenha();
+
         },
         click() {
             mudaparatelas(telas.jogo);
         },
         atualiza() {
-
+            globais.chao.atualiza();
+            globais.canos.atualiza();
         }
     }
 };
 telas.jogo = {
     desenha() {
         planodefundo.desenha();
-        chao.desenha();
-        flappybird.desenha();
+        globais.canos.desenha();
+        globais.chao.desenha();
+
+        globais.flappybird.desenha();
+    },
+    click() {
+        globais.flappybird.pula()
+
     },
     atualiza() {
-        flappybird.atualiza();
+        globais.chao.atualiza();
+        globais.flappybird.atualiza();
+        globais.canos.atualiza();
     }
-}
-
-
-
-
+};
 
 
 function loop() {
 
     telasAtiva.desenha();
     telasAtiva.atualiza();
-
+    frames += 1;
     requestAnimationFrame(loop);
-}
+};
 
 window.addEventListener('click', function () {
     if (telasAtiva.click) {
         telasAtiva.click()
     }
-})
-
-
+});
 
 mudaparatelas(telas.INICIO);
 loop();
