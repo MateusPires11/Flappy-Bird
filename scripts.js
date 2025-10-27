@@ -4,6 +4,28 @@ sprites.src = './sprites.png';
 const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
 
+const msgGetReady = {
+    spritex: 134,
+    spritey: 0,
+    largura: 174,
+    altura: 152,
+    x: (canvas.width / 2) - 174 / 2,
+    y: 50,
+
+    desenha() {
+        ctx.drawImage(
+            sprites,
+            msgGetReady.spritex, msgGetReady.spritey,
+            msgGetReady.largura, msgGetReady.altura,
+            msgGetReady.x, msgGetReady.y,
+            msgGetReady.largura, msgGetReady.altura);
+    }
+}
+
+
+
+
+
 
 const chao = {
     spritex: 0,
@@ -42,7 +64,7 @@ const planodefundo = {
 
     desenha() {
         ctx.fillStyle = '#57e8f2';
-        ctx.fillRect(0, 0, canvas.height, canvas.height)
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.drawImage(
             sprites,
@@ -96,21 +118,60 @@ const flappybird = {
     }
 }
 
+let telasAtiva = {};
+
+function mudaparatelas(novatela) {
+    telasAtiva = novatela;
+}
+
+
+
+const telas = {
+    INICIO: {
+        desenha() {
+            planodefundo.desenha();
+            chao.desenha();
+            msgGetReady.desenha();
+        },
+        click() {
+            mudaparatelas(telas.jogo);
+        },
+        atualiza() {
+
+        }
+    }
+};
+telas.jogo = {
+    desenha() {
+        planodefundo.desenha();
+        chao.desenha();
+        flappybird.desenha();
+    },
+    atualiza() {
+        flappybird.atualiza();
+    }
+}
+
+
+
+
 
 
 function loop() {
 
-    flappybird.atualiza();
-
-
-    planodefundo.desenha();
-
-    chao.desenha();
-
-
-    flappybird.desenha();
+    telasAtiva.desenha();
+    telasAtiva.atualiza();
 
     requestAnimationFrame(loop);
 }
 
+window.addEventListener('click', function () {
+    if (telasAtiva.click) {
+        telasAtiva.click()
+    }
+})
+
+
+
+mudaparatelas(telas.INICIO);
 loop();
